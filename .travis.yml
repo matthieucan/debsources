@@ -1,0 +1,9 @@
+language: python
+python:
+  - "2.7"
+
+before_install:
+  - sudo apt-get update -qq
+ - sudo apt-get install -y apache2 libapache2-mod-fcgid libapache2-mod-wsgi libjs-highlight python-debian python-flask python-flup python-magic tango-icon-theme debmirror exuberant-ctags postgresql-9.4 python-matplotlib python-psycopg2 python-sqlalchemy sloccount python-nose python-nose2-cov python-flaskext.wtf dpkg-dev
+
+script: make test
