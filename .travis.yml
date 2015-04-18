@@ -10,6 +10,7 @@ before_install:
 
 before_script:
   - cp etc/config.travis.ini etc/config.ini
+  - sed -i 's?TRAVISWD?'`pwd`'?' etc/config.ini
   - sudo mkdir /opt/debsources
   - sudo chmod o+rwx /opt/debsources
   - export PYTHONPATH=$PYTHONPATH:$(pwd)/debsources
