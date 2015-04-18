@@ -4,8 +4,11 @@ flask
 Flask-WTF
 sqlalchemy
 python-debian
-chardet
 psycopg2
 # required for matplotlib to build:
 freetype-py
 matplotlib
+
+# for travis, which doesn't use Debian's python-* packages
+chardet
+python-magic
