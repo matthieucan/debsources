@@ -9,6 +9,9 @@ before_install:
 # missing: libjs-highlight (not in Ubuntu 12.04)
 
 before_script:
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)/debsources
+  - psql -c 'create database debsources;' -U postgres
+  - bin/debsources-dbadmin --createdb postgresql://postgres@localhost/debsources
   - bin/debsources-update
 
 addons:
