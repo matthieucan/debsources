@@ -11,4 +11,3 @@ matplotlib
 
 # for travis, which doesn't use Debian's python-* packages
 chardet
-python-magic
