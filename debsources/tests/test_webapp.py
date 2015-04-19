@@ -50,6 +50,8 @@ class DebsourcesTestCase(unittest.TestCase, DbTestFixture):
         cls.app = app_wrapper.app.test_client()
         cls.app_wrapper = app_wrapper
 
+        raise Exception(str(cls.app.url_map.iter_rules()))
+
     @classmethod
     def tearDownClass(cls):
         cls.app_wrapper.engine.dispose()
