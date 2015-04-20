@@ -22,7 +22,7 @@ before_script:
   - psql -c 'create database debsources;' -U postgres
   - bin/debsources-dbadmin --createdb postgresql://postgres@localhost/debsources
   - bin/debsources-update
-  - ls -al /opt/debsources/testdata/sources/contrib/n/nvidia-xconfig/319.72-1
+  - ls -al testdata/sources/contrib/n/nvidia-xconfig/319.72-1
 
 addons:
   postgresql: "9.3"
