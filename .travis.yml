@@ -29,7 +29,8 @@ before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)/debsources
   - psql -c 'create database debsources;' -U postgres
   - bin/debsources-dbadmin --createdb postgresql://postgres@localhost/debsources
-  - bin/debsources-update
+  - bin/debsources-update -v
   - psql -c "select package_names.name, files.path from suites, files, packages, package_names where files.package_id = suites.package_id and suite = 'jessie' and package_names.id = packages.name_id and files.package_id = packages.id and files.path = '\x2e70632f6170706c6965642d70617463686573';" debsources -o coucou && cat coucou
+  - ls -al testdata/sources/non-free/m/make-doc-non-dfsg/4.0-2/.pc/
 
 script: make test
