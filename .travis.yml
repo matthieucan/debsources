@@ -1,6 +1,14 @@
 language: python
+
 python:
   - "2.7"
+
+addons:
+  postgresql: "9.3"
+# debsources uses 9.4
+
+notifications:
+  email: false
 
 before_install:
   - pwd
@@ -22,13 +30,5 @@ before_script:
   - psql -c 'create database debsources;' -U postgres
   - bin/debsources-dbadmin --createdb postgresql://postgres@localhost/debsources
   - bin/debsources-update
-  - ls -al testdata/sources/contrib/n/nvidia-xconfig/319.72-1
-
-addons:
-  postgresql: "9.3"
-# debsources uses 9.4
 
 script: make test
-
-notifications:
-  email: false
