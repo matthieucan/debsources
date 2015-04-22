@@ -59,7 +59,14 @@ def add_package(session, pkg, pkgdir, sticky=False):
 
         # add individual source files to the File table
         file_table = {}
+            
         for (relpath, _abspath) in fs_storage.walk_pkg_files(pkgdir):
+            if db_package.name.name == 'make-doc-non-dfsg':
+                print(_abspath)
+            # if 'make-doc-non-dfsg/4.0-2/.pc/applied-patches' in _abspath:
+            #     import pdb
+            #     pdb.set_trace()
+            #     print(_abspath, dir(db_package))
             file_ = File(db_package, relpath)
             session.add(file_)
             session.flush()
