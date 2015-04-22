@@ -30,6 +30,6 @@ before_script:
   - psql -c 'create database debsources;' -U postgres
   - bin/debsources-dbadmin --createdb postgresql://postgres@localhost/debsources
   - bin/debsources-update
-  - psql -c "select count(*) from suites, files where files.package_id = suites.package_id and suite = 'jessie';" -U postgres
+  - psql -c "select count(*) from suites, files where files.package_id = suites.package_id and suite = 'jessie';" -U postgres debsources
 
 script: make test
