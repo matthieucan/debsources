@@ -102,6 +102,8 @@ def walk_pkg_files(pkgdir, file_table=None):
     else:
         for root, dirs, files in os.walk(pkgdir):
             for f in files:
+                if str(f) == 'applied-patches' and 'make-doc-non-dfsg' in root:
+                    print(root, f)
                 abspath = os.path.join(root, f)
                 relpath = os.path.relpath(abspath, pkgdir)
                 yield (relpath, abspath)

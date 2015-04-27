@@ -61,8 +61,8 @@ def add_package(session, pkg, pkgdir, sticky=False):
         file_table = {}
             
         for (relpath, _abspath) in fs_storage.walk_pkg_files(pkgdir):
-            if db_package.name.name == 'make-doc-non-dfsg':
-                print(_abspath)
+            #if db_package.name.name == 'make-doc-non-dfsg':
+            #    print(_abspath)
             # if 'make-doc-non-dfsg/4.0-2/.pc/applied-patches' in _abspath:
             #     import pdb
             #     pdb.set_trace()
