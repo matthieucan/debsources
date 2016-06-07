@@ -55,7 +55,19 @@ def parse_sloccount(path):
     """
     slocs = {}
     in_table = False
-    with open(path) as sloccount:
+
+    # In Python 3, reading a file as text, without encoding, will
+    # raise errors, because sloccount logs file names, that can
+    # contain non-utf8 chars (file names have no encoding specified on
+    # unix). These lines will not be inserted in the db, as they are
+    # log and not sloccount formal output. It is then safe to
+    # surrogatescape them.
+    if six.PY2:
+        open_args = {}
+    else:
+        open_args = {'encoding': 'utf8', 'errors': 'surrogateescape'}
+
+    with open(path, **open_args) as sloccount:
         for line in sloccount:
             if in_table:
                 m = re.match(SLOC_TBL_FOOTER, line)

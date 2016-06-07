@@ -62,14 +62,14 @@ def shutdown_session(exception=None):
 # TODO the context need a little bit modification
 @app.context_processor
 def skeleton_variables():
-    update_ts_file = os.path.join(app.config['CACHE_DIR'], 'last-update')
+    update_ts_file = os.path.join(app.config['CACHE_DIR'], b'last-update')
     # TODO, this part should be moved to per blueprint context processor
     last_update = local_info.read_update_ts(update_ts_file)
 
     packages_prefixes = qry.pkg_names_get_packages_prefixes(
         app.config["CACHE_DIR"])
 
-    credits_file = os.path.join(app.config["LOCAL_DIR"], "credits.html")
+    credits_file = os.path.join(app.config["LOCAL_DIR"], b"credits.html")
     credits = local_info.read_html(credits_file)
 
     return dict(packages_prefixes=packages_prefixes,
@@ -195,6 +195,7 @@ class GeneralView(View):
         except Http404Error as e:
             return self.err_func(e, http=404)
         except Http500Error as e:
+            app.logger.warning(e)
             return self.err_func(e, http=500)
         # do not propagate the exception
         except Exception as e:
@@ -208,7 +209,7 @@ class GeneralView(View):
 class Ping(View):
     def dispatch_request(self):
         update_ts_file = os.path.join(
-            current_app.config['CACHE_DIR'], 'last-update')
+            current_app.config['CACHE_DIR'], b'last-update')
         last_update = local_info.read_update_ts(update_ts_file)
         try:
             session.query(Package).first().id  # database check

@@ -89,12 +89,19 @@ def walk_pkg_files(pkgdir, file_table=None):
     absolute" as `pkgdir` is)
 
     """
-    if isinstance(pkgdir, six.text_type):
+    if not(isinstance(pkgdir, six.binary_type)):
         # dumb down pkgdir to byte string. Whereas pkgdir comes from Sources
         # and hence is ASCII clean, the paths that os.walk() will encounter
         # might not even be UTF-8 clean. Using str() we ensure that path
         # operations will happen between raw strings, avoding encoding issues.
-        pkgdir = str(pkgdir)
+        # Added for Python3: bytes instead of str. In both cases, we
+        # get at the end a sequence of bytes, that will make os.*
+        # functions return byte paths.
+        if six.PY2:
+            pkgdir = str(pkgdir)
+        else:
+            pkgdir = bytes(pkgdir, 'ascii')
+
     if file_table:
         for relpath in six.iterkeys(file_table):
             abspath = os.path.join(pkgdir, relpath)

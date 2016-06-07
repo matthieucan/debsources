@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import
 
+import os
 from collections import OrderedDict
 from flask import request, current_app
 
@@ -66,7 +67,6 @@ class VersionsView(GeneralView):
 
 
 class SummaryView(GeneralView):
-
     def _parse_file_deltas(self, summary, package, version):
         """ Parse a file deltas summary to create links to Debsources
 
@@ -74,10 +74,10 @@ class SummaryView(GeneralView):
         file_deltas = []
         lines = summary.splitlines()
         for line in lines[0:-1]:
-            filepath, deltas = line.split('|')
-            file_deltas.append(dict(filepath=filepath.replace(' ', ''),
+            filepath, deltas = line.split(b'|')
+            file_deltas.append(dict(filepath=filepath.replace(b' ', b''),
                                     deltas=deltas))
-        deltas_summary = '\n' + lines[-1]
+        deltas_summary = b'\n' + lines[-1]
         return file_deltas, deltas_summary
 
     def parse_patch_series(self, session, package, version, config, series):
@@ -89,12 +89,12 @@ class SummaryView(GeneralView):
         patches_info = OrderedDict()
         for serie in series:
             serie = serie.strip()
-            if not serie.startswith('#') and not serie == "":
-                patch = serie.split(' ')[0]
+            if not serie.startswith(b'#') and not serie == b"":
+                patch = serie.split(b' ')[0]
                 try:
+                    path = os.path.join(b'debian/patches/', patch)
                     serie_path, loc = helper.get_sources_path(
-                        session, package, version, current_app.config,
-                        'debian/patches/' + patch)
+                        session, package, version, current_app.config, path)
                     summary = helper.get_file_deltas(serie_path)
                     deltas, deltas_summary = self._parse_file_deltas(summary,
                                                                      package,
@@ -104,7 +104,8 @@ class SummaryView(GeneralView):
                                                summary=deltas_summary,
                                                download=loc.get_raw_url(),
                                                description=description,
-                                               bug=bug)
+                                               bug=bug,
+                                               path=path)
                 except (FileOrFolderNotFound, InvalidPackageOrVersionError):
                     patches_info[serie] = dict(summary='Patch does not exist',
                                                description='---',
@@ -112,7 +113,9 @@ class SummaryView(GeneralView):
         return patches_info
 
     def get_objects(self, packagename, version):
-        path_to = packagename + '/' + version
+        path_to = os.path.join(bytes(packagename, encoding='utf8'),
+                               bytes(version, encoding='utf8'))
+        series_path_to = os.path.join(path_to, helper.SERIES_PATH)
 
         try:
             format_file = helper.get_patch_format(session, packagename,
@@ -131,7 +134,8 @@ class SummaryView(GeneralView):
                         path=path_to,
                         format=format_file,
                         patches=[],
-                        supported=False)
+                        supported=False,
+                        series_path_to = series_path_to)
 
         # are there any patches for the package?
         try:
@@ -143,7 +147,8 @@ class SummaryView(GeneralView):
                         path=path_to,
                         format=format_file,
                         patches=[],
-                        supported=True)
+                        supported=True,
+                        series_path_to = series_path_to)
 
         info = self.parse_patch_series(session, packagename, version,
                                        current_app.config, series)
@@ -151,26 +156,36 @@ class SummaryView(GeneralView):
             return dict(package=packagename,
                         version=version,
                         format=format_file,
-                        patches=[key.rstrip() for key in info.keys()])
+                        patches=[key.rstrip() for key in info.keys()],
+                        series_path_to = series_path_to)
+        from pprint import pprint
+        pprint(info)
         return dict(package=packagename,
                     version=version,
-                    path=path_to,
+                    path=path_to.decode('utf8'),
                     format=format_file,
                     series=info.keys(),
                     patches=info,
-                    supported=True)
+                    supported=True,
+                    series_path_to = series_path_to,
+                    joinpath=os.path.join)
 
 
 class PatchView(GeneralView):
 
     def get_objects(self, packagename, version, path_to):
+        print(path_to)
+        print(type(path_to))
+        # we receive a string from flask
+        # but paths are bytes
+        path_to = path_to.encode('utf8', errors='surrogateescape')
         try:
             serie_path, loc = helper.get_sources_path(
                 session, packagename, version, current_app.config,
-                'debian/patches/' + path_to.rstrip())
+                b'debian/patches/' + path_to.rstrip())
         except (FileOrFolderNotFound, InvalidPackageOrVersionError):
             raise Http404ErrorSuggestions(packagename, version,
-                                          'debian/patches/' + path_to.rstrip())
+                                          b'debian/patches/' + path_to.rstrip())
         if 'api' in request.endpoint:
             summary = helper.get_file_deltas(serie_path)
             description, bug = helper.get_patch_details(serie_path)

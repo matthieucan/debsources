@@ -11,13 +11,14 @@
 
 from __future__ import absolute_import
 
+import io
 import six
 from six.moves import range
 
 from debsources.filetype import get_highlightjs_language
 
 
-class SourceCodeIterator(object):
+class SourceCodeIterator(six.Iterator):
     def __init__(self, filepath, hl=None, msg=None, encoding="utf8",
                  lang=None):
         """
@@ -35,8 +36,8 @@ class SourceCodeIterator(object):
                       [("cpp", ['cpp','hpp']), (...), ...]
         """
         self.filepath = filepath
-        self.filename = self.filepath.split('/')[-1]
-        self.file = open(filepath)
+        self.filename = self.filepath.split(b'/')[-1]
+        self.file = open(filepath, 'rb')
         # we store the firstline (used to determine file language)
         try:
             self.firstline = next(self.file)
@@ -71,7 +72,7 @@ class SourceCodeIterator(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         self.current_line += 1
         if self.current_line in self.hls:
             class_ = True
@@ -90,7 +91,7 @@ class SourceCodeIterator(object):
         if self.number_of_lines is not None:
             return self.number_of_lines
         self.number_of_lines = 0
-        with open(self.filepath) as sfile:
+        with io.open(self.filepath, encoding='utf8', errors='surrogateescape') as sfile:
             for line in sfile:
                 self.number_of_lines += 1
         return self.number_of_lines

@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+import functools
 
 import six
 
@@ -59,10 +60,15 @@ def suites(session, suites='release'):
     db_suites = [s for s in db_suites if s in SUITES[suites]]
 
     def by_release_date(s1, s2):
-        return cmp(SUITES[suites].index(s1),
-                   SUITES[suites].index(s2))
+        x = SUITES[suites].index(s1)
+        y = SUITES[suites].index(s2)
+        return (x > y) - (x < y)
+    #https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
+    #https://docs.python.org/2/library/functools.html#functools.cmp_to_key
+#        return cmp(SUITES[suites].index(s1),
+#                   SUITES[suites].index(s2))
 
-    return sorted(db_suites, cmp=by_release_date)
+    return sorted(db_suites, key=functools.cmp_to_key(by_release_date))
 
 
 def sticky_suites(session):
@@ -522,8 +528,8 @@ def licenses_summary_w_dual(results):
             licenses = re.split(', |and |or ', result)
             unknown = True  # verify all licenses in statement are standard
             for l in licenses:
-                key = filter(lambda x: re.search(x, l) is not None,
-                             Licenses)
+                key = list(filter(lambda x: re.search(x, l) is not None,
+                                  Licenses))
                 if not key:
                     unknown = False
             if not unknown:
@@ -543,8 +549,8 @@ def licenses_summary_w_dual(results):
                 else:
                     summary[result.replace(' ', '_')] = results[result]
         else:
-            key = filter(lambda x: re.search(x, result)
-                         is not None, Licenses)
+            key = list(filter(lambda x: re.search(x, result)
+                              is not None, Licenses))
             # standard licenses
             if len(key) > 0:
                 summary[result.replace(' ', '_')] = results[result]
@@ -561,8 +567,8 @@ def licenses_summary(results):
             licenses = re.split(', |and |or ', result)
             for license in licenses:
                 license = license.rstrip()
-                key = filter(lambda x: re.search(x, license)
-                             is not None, Licenses)
+                key = list(filter(lambda x: re.search(x, license)
+                                  is not None, Licenses))
                 if len(key) > 0:
                     # if license already in dict then add it up
                     if license.replace(' ', '_') in summary.keys():
@@ -572,8 +578,8 @@ def licenses_summary(results):
                 else:
                     summary['unknown'] += results[result]
         else:
-            key = filter(lambda x: re.search(x, result)
-                         is not None, Licenses)
+            key = list(filter(lambda x: re.search(x, result)
+                              is not None, Licenses))
             if len(key) > 0:
                     # if license already in dict then add it up
                     if result.replace(' ', '_') in summary.keys():

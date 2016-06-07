@@ -11,10 +11,13 @@
 
 from __future__ import absolute_import
 
+import functools
+import six
 from functools import partial
+
 from debian.debian_support import version_compare
 
-from flask import request, url_for, render_template, redirect
+from flask import request, url_for, render_template, redirect, jsonify as _jsonify
 
 import debsources.query as qry
 from debsources import consts
@@ -138,7 +141,7 @@ def handle_versions(version, package, path):
 
     versions = sorted([v['version'] for v in versions_w_suites
                       if version in v['suites']],
-                      cmp=version_compare)
+                      key=functools.cmp_to_key(version_compare))
     return versions
 
 
@@ -165,3 +168,22 @@ def generic_before_request(request, offset):
     # -1 is to delete ending slash
     path = '/'.join(path_dict[offset + 2:-1])
     return parse_version(request.endpoint, package, version, path)
+
+
+def jsonify(*args, **kwargs):
+    """ a wrapper around flask's jsonify, that will convert any binary
+    variable to utf8, using surrogateescape for illegal characters. """
+
+    def conv(x):
+        if type(x) == six.binary_type:
+            x = x.decode('utf8', errors='surrogateescape')
+        elif type(x) == dict:
+            x = {k: conv(v) for (k, v) in x.items()}
+        elif type(x) == list:
+            x = [conv(v) for v in x]
+        return x
+
+    args_utf8 = [conv(x) for x in args]
+    kwargs_utf8 = {k: conv(v) for (k, v) in kwargs.items()}
+
+    return _jsonify(*args_utf8, **kwargs_utf8)

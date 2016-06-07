@@ -12,16 +12,15 @@
 
 from __future__ import absolute_import
 
-from flask import jsonify, request, render_template
+from flask import request, render_template
 
 from . import bp_patches
 
-from ..helper import bind_render, generic_before_request
+from ..helper import bind_render, generic_before_request, jsonify
 from ..views import (IndexView, Ping, PrefixView, ErrorHandler,
                      ListPackagesView, SearchView, NewsArchiveView)
 from .views import SummaryView, PatchView, VersionsView
 from debsources.excepts import Http404Error
-
 
 # context vars
 @bp_patches.context_processor

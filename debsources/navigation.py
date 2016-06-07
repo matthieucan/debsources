@@ -30,7 +30,7 @@ import debsources.query as qry
 class Location(object):
     """ a location in a package, can be a directory or a file """
 
-    def _get_debian_path(self, session, package, version, sources_dir):
+    def _get_debian_path(self, session):
         """
         Returns the Debian path of a package version.
         For example: main/h
@@ -40,57 +40,84 @@ class Location(object):
 
         sources_dir: the sources directory, usually comes from the app config
         """
-        prefix = SourcePackage.pkg_prefix(package)
+        prefix = SourcePackage.pkg_prefix(self.package)
+        prefix_b = bytes(prefix, encoding='ascii')
 
         try:
             p_id = session.query(PackageName) \
-                          .filter(PackageName.name == package).first().id
+                          .filter(PackageName.name == self.package).first().id
             varea = session.query(Package) \
                            .filter(and_(Package.name_id == p_id,
-                                        Package.version == version)) \
+                                        Package.version == self.version)) \
                            .first().area
+            varea_b = bytes(varea, encoding='ascii')
         except:
             # the package or version doesn't exist in the database
             # BUT: packages are stored for a longer time in the filesystem
-            # to allow codesearch.d.n and others less up-to-date platforms
+            # to allow codesearch.d.n and other less up-to-date platforms
             # to point here.
             # Problem: we don't know the area of such a package
             # so we try in main, contrib and non-free.
             for area in AREAS:
-                if os.path.exists(os.path.join(sources_dir, area,
-                                               prefix, package, version)):
-                    return os.path.join(area, prefix)
+                area_b = bytes(area, encoding='ascii')
+                if os.path.exists(os.path.join(self.sources_dir,
+                                               area_b,
+                                               prefix_b,
+                                               self.package_b,
+                                               self.version_b)):
+                    return os.path.join(area_b, prefix_b)
 
             raise InvalidPackageOrVersionError("%s %s" % (package, version))
 
-        return os.path.join(varea, prefix)
+        return os.path.join(varea_b, prefix_b)
 
     def __init__(self, session, sources_dir, sources_static,
                  package, version="", path=""):
-        """ initialises useful attributes """
-        debian_path = self._get_debian_path(session,
-                                            package, version, sources_dir)
+        """ Constructs a location.
+
+        If provided, the path argument must be binary """
+
+        self.sources_dir = sources_dir
+        self.sources_static = sources_static
+
         self.package = package
         self.version = version
+        # for use in paths:
+        self.package_b = bytes(package, encoding='utf8', errors='surrogateescape')
+        self.version_b = bytes(version, encoding='utf8', errors='surrogateescape')
+
         self.path = path
-        self.path_to = os.path.join(package, version, path)
+
+        debian_path = self._get_debian_path(session)
+
+        # print(package + '  ' + str(type(package)))
+        # print(version + '  ' + str(type(version)))
+        # print(path + '  ' + str(type(path)))
+        # print(path.encode('utf8', errors='surrogateescape'))# + '  ' + str(type(path)))
+        self.path_to = os.path.join(self.package_b, self.version_b, self.path)
+
+        # print(type(path))
+        # try:
+        #     path.decode('utf8')
+        # except UnicodeEncodeError as e:
+        #     raise e
 
         self.sources_path = os.path.join(
-            sources_dir,
+            self.sources_dir,
             debian_path,
             self.path_to)
 
         self.version_path = os.path.join(
-            sources_dir,
+            self.sources_dir,
             debian_path,
-            package,
-            version)
+            self.package_b,
+            self.version_b)
 
         if not(os.path.exists(self.sources_path)):
             raise FileOrFolderNotFound("%s" % (self.path_to))
 
         self.sources_path_static = os.path.join(
-            sources_static,
+            self.sources_static,
             debian_path,
             self.path_to)
 
@@ -122,10 +149,14 @@ class Location(object):
         elif self.path == "":
             return self.version
         else:
-            return self.path.split("/")[-1]
+            return self.path.split(b"/")[-1]
 
     def get_path_to(self):
-        return self.path_to.rstrip("/")
+        return self.path_to.rstrip(b"/")
+
+    def get_parent_path(self):
+        return os.path.dirname(self.get_path_to())
+        #return b'/'.join(path.split(b'/')[:-1])
 
 
 class Directory(object):
@@ -133,7 +164,7 @@ class Directory(object):
 
     def __init__(self, location, hidden_files=[]):
         # if the directory is a toplevel one, we remove the .pc folder
-        self.sources_path = location.sources_path
+#        self.sources_path = location.sources_path
         self.location = location
         self.hidden_files = hidden_files
 
@@ -144,22 +175,24 @@ class Directory(object):
         in a tuple (name, type)
         """
         def get_type(f):
-            if os.path.isdir(os.path.join(self.sources_path, f)):
+            if os.path.isdir(os.path.join(self.location.sources_path, f)):
                 return "directory"
             else:
                 return "file"
-        get_stat, join_path = qry.location_get_stat, os.path.join
-        listing = sorted(dict(name=f, type=get_type(f), hidden=False,
-                              stat=get_stat(join_path(self.sources_path, f)))
-                         for f in os.listdir(self.sources_path))
-
+        get_stat = qry.location_get_stat
+        listing = sorted([dict(name=f, type=get_type(f), hidden=False,
+                              stat=get_stat(os.path.join(self.location.sources_path, f)))
+                         for f in os.listdir(self.location.sources_path)],
+                         key=lambda x: x['name'])
+        print(self.hidden_files)
         for hidden_file in self.hidden_files:
             for f in listing:
-                full_path = os.path.join(self.location.sources_path, f['name'])
+                full_path = os.path.join(self.location.sources_path,
+                                         f['name'])
                 if f['type'] == "directory":
-                    full_path += "/"
+                    full_path += b"/"
                 f['hidden'] = (f['hidden'] or
-                               fnmatch.fnmatch(full_path, hidden_file))
+                               fnmatch.fnmatch(full_path, bytes(hidden_file, encoding='ascii')))
 
         return listing
 
@@ -198,7 +231,7 @@ class SourceFile(object):
                         .filter(File.id == Checksum.file_id) \
                         .filter(PackageName.name == self.location.package) \
                         .filter(Package.version == self.location.version) \
-                        .filter(File.path == str(self.location.path)) \
+                        .filter(File.path == self.location.path.encode('utf8')) \
                         .first()
         # WARNING: in the DB path is binary, and here
         # location.path is unicode, because the path comes from

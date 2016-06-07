@@ -20,6 +20,7 @@ from debsources.navigation import Location, SourceFile
 ACCEPTED_FORMATS = ['3.0 (quilt)',
                     '3.0 (native)']
 
+SERIES_PATH = b'debian/patches/series'
 
 def get_patch_details(path):
     """ Parse a patch to extract the description and or bug if it exists
@@ -92,7 +93,7 @@ def get_patch_format(session, package, version, config):
     """
     source_format, loc = get_sources_path(session, package, version,
                                           config,
-                                          'debian/source/format')
+                                          b'debian/source/format')
     with io.open(source_format, mode='r', encoding='utf-8') as f:
         format_file = f.read()
     return format_file.strip()
@@ -109,7 +110,7 @@ def get_patch_series(session, package, version, config):
     """
     series, loc = get_sources_path(session, package, version,
                                    config,
-                                   'debian/patches/series')
-    with io.open(series, mode='r', encoding='utf-8') as f:
+                                   SERIES_PATH)
+    with io.open(series, mode='rb') as f:#, encoding='utf-8') as f:
             series = f.readlines()
     return series

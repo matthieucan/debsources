@@ -116,20 +116,24 @@ class SourceView(GeneralView):
         """
         renders a directory, lists subdirs and subfiles
         """
+        # we assume hidden files are ascii:
         hidden_files = app.config['HIDDEN_FILES'].split(" ")
-        directory = Directory(location, hidden_files)
+        directory = Directory(location, hidden_files=hidden_files)
 
         pkg_infos = Infobox(session, location.get_package(),
                             location.get_version()).get_infos()
 
         content = directory.get_listing()
         path = location.get_path_to()
+        parent_path = location.get_parent_path()
 
         if self.d.get('api'):
             self.render_func = jsonify
         else:
             self.render_func = bind_render(
                 'sources/source_folder.html',
+                parent_path=parent_path,
+                joinpath = os.path.join,
                 subdirs=[x for x in content if x['type'] == "directory"],
                 subfiles=[x for x in content if x['type'] == "file"],
                 nb_hidden_files=sum(1 for f in content if f['hidden']),
@@ -248,6 +252,6 @@ class SourceView(GeneralView):
 
         package = path_dict[0]
         version = path_dict[1]
-        path = '/'.join(path_dict[2:])
+        path = os.path.join(path_dict[2:])
 
         return self._render_location(package, version, path)

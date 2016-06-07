@@ -81,7 +81,7 @@ def get_sources_path(session, package, version, config):
     location = Location(session,
                         config["SOURCES_DIR"],
                         config["SOURCES_STATIC"],
-                        package, version, 'debian/copyright')
+                        package, version, b'debian/copyright')
 
     file_ = SourceFile(location)
 
@@ -93,13 +93,17 @@ def get_sources_path(session, package, version, config):
 
 
 def parse_license(sources_path):
+    # we pre-check the machine-readable property, to avoid parsing the
+    # file with copyright.Copyright in most non-machine-readable
+    # situations (for performance issues)
     required_fields = ['Format:', 'Files:', 'Copyright:', 'License:']
-    d_file = open(sources_path).read()
-    if not all(field in d_file for field in required_fields):
-        raise copyright.NotMachineReadableError
-    with io.open(sources_path, mode='rt', encoding='utf-8') as f:
-        return copyright.Copyright(f)
+    with io.open(sources_path, encoding='utf8', errors='surrogateescape') as d_file:
+        d_file_content = d_file.read()
+        if not all(field in d_file_content for field in required_fields):
+            raise copyright.NotMachineReadableError
 
+    with io.open(sources_path, mode='rt', encoding='utf-8', errors='surrogateescape') as f:
+        return copyright.Copyright(f)
 
 def license_url(package, version):
     return url_for('.license', packagename=package, version=version)
@@ -116,7 +120,7 @@ def get_license(session, package, version, path, license_path=None):
     except copyright.NotMachineReadableError:
         return None
 
-    paragraph = c.find_files_paragraph(path)
+    paragraph = c.find_files_paragraph(path.decode('utf8', errors='surrogateescape'))
     if paragraph:
         try:
             return paragraph.license.synopsis
@@ -197,7 +201,7 @@ def create_url(glob="", base=None,):
 def match_license(synopsis):
     """ Matches a `synopsis` with a license and creates a url
     """
-    key = filter(lambda x: re.search(x, synopsis) is not None, Licenses)
+    key = list(filter(lambda x: re.search(x, synopsis) is not None, Licenses))
     if len(key) is not 0:
         return Licenses[key[0]]
     else:

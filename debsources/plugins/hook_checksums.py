@@ -43,10 +43,13 @@ def parse_checksums(path):
 
     yield (sha256, path) pairs
     """
-    with open(path) as checksums:
+    with open(path, 'rb') as checksums:
         for line in checksums:
             line = line.rstrip()
-            sha256 = line[0:64]
+            # using binary mode, we need to convert the sha to a
+            # proper ascii string, to avoid sqlalchemy to use the repr
+            # of sha256, which would look like "b'abc123'".
+            sha256 = str(line[0:64].decode('ascii'))
             path = line[66:]
             yield (sha256, path)
 

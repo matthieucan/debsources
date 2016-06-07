@@ -13,6 +13,7 @@ from __future__ import absolute_import
 
 from collections import defaultdict, Counter
 import os
+import functools
 
 from flask import current_app, request
 from debian.debian_support import version_compare
@@ -78,9 +79,9 @@ class ChecksumLicenseView(ChecksumView):
             for package in dd:
                 version = sorted([item['version'] for item
                                  in dd[package]],
-                                 cmp=version_compare)[-1]
-                files.append(filter(lambda f: f['version'] == version,
-                                    dd[package])[0])
+                                 key=functools.cmp_to_key(version_compare))[-1]
+                files.append(list(filter(lambda f: f['version'] == version,
+                                         dd[package]))[0])
         return files
 
     def _get_license_dict(self, files):
@@ -98,16 +99,19 @@ class ChecksumLicenseView(ChecksumView):
                                                   '')
                 l = helper.get_license(session, f['package'],
                                        f['version'], f['path'], license_path)
+
                 result.append(dict(oracle='debian',
-                                   path=f['path'],
+                                   path=f['path'].decode('utf8'),
                                    package=f['package'],
                                    version=f['version'],
                                    license=l,
                                    origin=helper.license_url(f['package'],
                                                              f['version'])))
-            except Exception:
+            except Exception as e: # todo: this shouldn't happen, since get_license can't raise exceptions
+                #app.logger.error(e)
+                raise e
                 result.append(dict(oracle='debian',
-                                   path=f['path'],
+                                   path=f['path'].decode('utf8'),
                                    package=f['package'],
                                    version=f['version'],
                                    license=None,
@@ -211,7 +215,7 @@ class SearchFileView(GeneralView):
         except (FileOrFolderNotFound, InvalidPackageOrVersionError):
             raise Http404ErrorSuggestions(f.package, f.version, '')
         return dict(oracle='debian',
-                    path=f.path,
+                    path=f.path.decode('utf8', errors='surrogateescape'),
                     package=f.package,
                     version=f.version,
                     license=helper.get_license(session, f.package,
@@ -220,7 +224,7 @@ class SearchFileView(GeneralView):
                     origin=helper.license_url(f.package, f.version))
 
     def get_objects(self, packagename, version, path_to):
-        path = str(path_to)
+        path = path_to.encode('utf8')
         if version == 'all':
             files = qry.get_files_by_path_package(session, path,
                                                   packagename).all()
@@ -239,7 +243,7 @@ class SearchFileView(GeneralView):
                                 for res in files])
         else:
             return dict(count=len(files),
-                        path=path,
+                        path=path.decode('utf8', errors='surrogateescape'),
                         package=packagename,
                         version=version,
                         result=[dict(checksum=res.checksum,

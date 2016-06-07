@@ -14,7 +14,6 @@ from __future__ import absolute_import
 import importlib
 import logging
 import os
-import string
 from collections import defaultdict
 
 from debian import deb822
@@ -124,6 +123,8 @@ def parse_conf_webapp(items):
             value = False
         elif value.lower() == "true":
             value = True
+        elif value.startswith('/'):
+            value = bytes(value, encoding='ascii')
         typed[key.upper()] = value  # Flask only understands CAPSLOCKED keys
     return typed
 
@@ -210,10 +211,11 @@ def add_arguments(cmdline):
                          'times. Warning: if not used with "--backend none" '
                          'it might lead to multiple execution of the same '
                          'hook. E.g.: -t add-package/checksums' %
-                         string.join(updater.KNOWN_EVENTS, ', '),
+                         ', '.join(updater.KNOWN_EVENTS),
                          dest='force_triggers')
     cmdline.add_argument('--verbose', '-v',
                          action='count',
+                         default=0,
                          help='increase console verbosity')
 
 

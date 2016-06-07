@@ -13,6 +13,7 @@ from __future__ import absolute_import
 
 import logging
 import operator
+import functools
 
 import matplotlib
 import six
@@ -73,12 +74,19 @@ def multiseries_plot(multiseries, fname, cols=7):
     plt.figure()
     plt.yscale('log')
 
-    def by_value((x1, y1), (x2, y2)):
-        return cmp(y1, y2)
+    def by_value(a, b):
+        (x1, y1) = a
+        (x2, y2) = b
+        return (y1 > y2) - (y1 < y2)
+    #https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
+    #https://docs.python.org/2/library/functools.html#functools.cmp_to_key
+
+    # def by_value((x1, y1), (x2, y2)):
+    #     return cmp(y1, y2)
 
     styles = cycle(LINE_STYLES)
     for name, series in sorted(six.iteritems(multiseries),
-                               cmp=by_value, reverse=True):
+                               key=functools.cmp_to_key(by_value), reverse=True):
         ts, values = _split_series(series)
         if any(values):
             plt.plot(ts, values, next(styles), label=name)

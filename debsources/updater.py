@@ -15,7 +15,6 @@ from __future__ import division
 import glob
 import logging
 import os
-import string
 import subprocess
 
 import six
@@ -409,8 +408,8 @@ def update_suites(status, conf, session, mirror):
         for pkg_id, src_entry in six.iteritems(status.sources):
             fields = list(pkg_id)
             fields.extend(src_entry[:-1])  # all except suites
-            fields.append(string.join(src_entry[-1], ','))
-            src_list.write(string.join(fields, '\t') + '\n')
+            fields.append(','.join(src_entry[-1]))
+            src_list.write('\t'.join(fields) + '\n')
     os.rename(src_list_path + '.new', src_list_path)
 
 

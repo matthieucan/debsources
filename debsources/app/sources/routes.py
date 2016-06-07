@@ -11,9 +11,9 @@
 
 from __future__ import absolute_import
 
-from flask import redirect, url_for, request, jsonify, render_template
+from flask import redirect, url_for, request, render_template
 
-from ..helper import bind_render, generic_before_request
+from ..helper import bind_render, generic_before_request, jsonify
 from ..views import (
     IndexView, SearchView, CtagView, ChecksumView, PrefixView,
     ListPackagesView, InfoPackageView, Ping, ErrorHandler,

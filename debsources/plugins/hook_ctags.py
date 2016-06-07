@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import logging
 import os
 import subprocess
+import io
 
 from sqlalchemy import sql
 
@@ -44,7 +45,7 @@ BULK_FLUSH_THRESHOLD = 20000
 
 # maximum number of detailed warnings for malformed tags that will be emitted.
 # used to avoid flooding logs
-BAD_TAGS_THRESHOLD = 5
+BAD_TAGS_THRESHOLD = 0
 
 
 def parse_ctags(path):
@@ -63,15 +64,20 @@ def parse_ctags(path):
         tag = {'kind': None, 'line': None, 'language': None}
         # initialize with extension fields which are not guaranteed to exist
 
-        fields = line.rstrip().split('\t')
+        fields = line.rstrip().split(b'\t')
         # will fail when encountering encoding
         # issues; that is intended
-        tag['tag'] = fields[0].decode()
+        tag['tag'] = fields[0].decode() # default system encoding
         tag['path'] = fields[1]
         # note: ignore fields[2], ex_cmd
 
+        # TODO: keep `tag` field as binary (and not utf8), to avoid
+        # ignoring tags coming from files encoded in another charset
+        # (this requires the field in the db to be binary, see bug
+        # #TODO)
+
         for ext in fields[3:]:  # parse extension fields
-            k, v = ext.split(':', 1)  # caution: "typeref:struct:__RAW_R_INFO"
+            k, v = ext.decode().split(':', 1)  # caution: "typeref:struct:__RAW_R_INFO"
             if k == 'kind':
                 tag['kind'] = v
             elif k == 'line':
@@ -80,24 +86,31 @@ def parse_ctags(path):
                 tag['language'] = v.lower()
             else:
                 pass  # ignore other fields
-
-        assert tag['line'] is not None
+        try:
+            assert tag['line'] is not None
+        except:
+            pass
+            print(tag)
         assert len(tag['tag']) <= MAX_KEY_LENGTH
         return tag
 
-    with open(path) as ctags:
+    # open in binary mode, and parse_tag will take care of decoding it
+    # this allows us to not ignore all the ctags in a file when one
+    # ctag is not properly encoded.
+    with io.open(path, 'rb') as ctags:
         bad_tags = 0
         for line in ctags:
             # e.g. 'music\tsound.c\t13;"\tkind:v\tline:13\tlanguage:C\tfile:\n'
             # see CTAGS(1), section "TAG FILE FORMAT"
-            if line.startswith('!_TAG'):  # skip ctags metadata
+            if line.startswith(b'!_TAG'):  # skip ctags metadata
                 continue
             try:
                 yield parse_tag(line)
-            except:
+            except UnicodeDecodeError as e:
                 bad_tags += 1
                 if bad_tags <= BAD_TAGS_THRESHOLD:
                     logging.warn('ignore malformed tag "%s"' % line.rstrip())
+
         if bad_tags > BAD_TAGS_THRESHOLD:
             logging.warn('%d extra malformed tag(s) ignored' %
                          (bad_tags - BAD_TAGS_THRESHOLD))

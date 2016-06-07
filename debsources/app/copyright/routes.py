@@ -12,9 +12,9 @@
 from __future__ import absolute_import
 
 
-from flask import jsonify, request, render_template
+from flask import request, render_template
 
-from ..helper import bind_render, generic_before_request
+from ..helper import bind_render, generic_before_request, jsonify
 from . import bp_copyright
 from ..views import (IndexView, PrefixView, ListPackagesView, ErrorHandler,
                      Ping, PackageVersionsView, SearchView, NewsArchiveView)

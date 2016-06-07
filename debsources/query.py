@@ -13,6 +13,7 @@ from __future__ import absolute_import, division
 
 import os
 import stat
+import functools
 
 from sqlalchemy import func as sql_func, not_
 from collections import namedtuple
@@ -37,7 +38,7 @@ def pkg_names_get_packages_prefixes(cache_dir):
     cache_dir: the cache directory, usually comes from the app config
     """
     try:
-        with open(os.path.join(cache_dir, 'pkg-prefixes')) as f:
+        with open(os.path.join(cache_dir, b'pkg-prefixes')) as f:
             prefixes = [l.rstrip() for l in f]
     except IOError:
         prefixes = PREFIXES_DEFAULT
@@ -77,19 +78,19 @@ def pkg_names_list_versions(session, packagename, suite="", suite_order=None):
             if not suite_order:
                 versions = session.query(Package) \
                                   .filter(Package.name_id == name_id).all()
-                versions = sorted(versions, cmp=version_compare)
+                versions = sorted(versions, key=functools.cmp_to_key(version_compare))
             else:
                 versions_w_suites = pkg_names_list_versions_w_suites(
                     session, packagename, as_object=True)
                 versions = sorted(versions_w_suites,
-                                  cmp=compare_with_suite_order)
+                                  key=functools.cmp_to_key(compare_with_suite_order))
         else:
             versions = (session.query(Package)
                                .filter(Package.name_id == name_id)
                                .filter(sql_func.lower(Suite.suite) == suite)
                                .filter(Suite.package_id == Package.id)
                                .all())
-            versions = sorted(versions, cmp=version_compare)
+            versions = sorted(versions, key=functools.cmp_to_key(version_compare))
     except Exception:
         raise InvalidPackageOrVersionError(packagename)
     # we sort the versions according to debian versions rules
@@ -145,7 +146,7 @@ def location_get_path_links(endpoint, path_to):
     returns the path hierarchy with urls, to use with 'You are here:'
     [(name, url(name)), (...), ...]
     """
-    path_dict = path_to.split('/')
+    path_dict = path_to.split(b'/')
     pathl = []
 
     # we import flask here, in order to permit the use of this module
@@ -160,11 +161,11 @@ def location_get_path_links(endpoint, path_to):
     if endpoint == '.versions':
         for (i, p) in enumerate(path_dict):
             pathl.append((p, url_for(endpoint,
-                                     packagename='/'.join(path_dict[:i + 1]))))
+                                     packagename=os.path.join(*path_dict[:i + 1]))))
     else:
         for (i, p) in enumerate(path_dict):
             pathl.append((p, url_for(endpoint,
-                                     path_to='/'.join(path_dict[:i + 1]))))
+                                     path_to=os.path.join(*path_dict[:i + 1]))))
     return pathl
 
 
@@ -209,7 +210,7 @@ def location_get_stat(sources_path):
     if file_type == "l":
         symlink_dest = os.readlink(sources_path)
 
-    return vars(LongFMT(file_type, file_perms, file_size, symlink_dest))
+    return LongFMT(file_type, file_perms, file_size, symlink_dest)._asdict()
 
 
 ''' SQLAlchemy queries '''
